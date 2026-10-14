@@ -1,0 +1,352 @@
+openapi: 3.1.0
+info:
+  title: SmartCluster control center API
+  version: 0.1.0
+  description: |
+    REST API of the control center, milestone a. Source of truth for the app's
+    TypeScript types (app/src/api/schema.d.ts, generated) and checked against
+    the Go types by control/internal/api/contract_test.go.
+
+    No login before milestone b: the API listens on localhost by default.
+
+    Live events: GET /api/v1/live upgrades to a WebSocket. Every frame is an
+    Envelope. The client sends `sub` / `unsub` with a Subscription; the server
+    confirms with `sub.ok` (Subscription with all active topics, same `id`).
+    Topics: `nodes` (node.status of all nodes), `stats` (node.stats of all
+    nodes), `node:<id>:stats` (node.stats of one node).
+servers:
+  - url: /
+paths:
+  /api/v1/version:
+    get:
+      operationId: getVersion
+      responses:
+        "200":
+          description: Version
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Version" }
+  /api/v1/healthz:
+    get:
+      operationId: getHealth
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Status" }
+  /api/v1/readyz:
+    get:
+      operationId: getReady
+      responses:
+        "200":
+          description: Database reachable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Status" }
+        "503":
+          description: Database not reachable
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/ca.crt:
+    get:
+      operationId: getCACertificate
+      responses:
+        "200":
+          description: Cluster CA certificate (PEM), for importing into a browser (ADR-0015)
+          content:
+            application/x-pem-file:
+              schema: { type: string }
+  /api/v1/cluster:
+    get:
+      operationId: getCluster
+      responses:
+        "200":
+          description: Cluster
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cluster" }
+  /api/v1/nodes:
+    get:
+      operationId: listNodes
+      responses:
+        "200":
+          description: All nodes that were not removed, oldest first
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NodeList" }
+  /api/v1/nodes/{id}:
+    get:
+      operationId: getNode
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Node
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Node" }
+        "404":
+          description: No such node
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/nodes/{id}/stats:
+    get:
+      operationId: getNodeStats
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: from, in: query, schema: { type: string, format: date-time }, description: "Default: to minus one hour" }
+        - { name: to, in: query, schema: { type: string, format: date-time }, description: "Default: now" }
+        - name: res
+          in: query
+          schema: { type: string, enum: [auto, raw, 5m], default: auto }
+          description: "auto: raw up to 6 hours, 5-minute averages above"
+      responses:
+        "200":
+          description: Time series
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StatsResponse" }
+        "400":
+          description: Invalid time range or resolution
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: No such node
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /api/v1/live:
+    get:
+      operationId: live
+      description: WebSocket upgrade, see the description at the top.
+      responses:
+        "101":
+          description: Switching protocols
+components:
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+    Status:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }
+    Version:
+      type: object
+      required: [version, protocol]
+      properties:
+        version: { type: string }
+        protocol: { type: integer }
+    Cluster:
+      type: object
+      required: [id, name, ca_fingerprint, agent_port, addresses]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        ca_fingerprint: { type: string }
+        agent_port: { type: integer }
+        addresses: { type: array, items: { type: string } }
+    NodeList:
+      type: object
+      required: [nodes]
+      properties:
+        nodes: { type: array, items: { $ref: "#/components/schemas/Node" } }
+    Node:
+      type: object
+      required: [id, name, hostname, status, os, hardware, agent_version, ip_addresses, mac_addresses, cert_not_after, created_at, last_seen_at, latest]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        hostname: { type: string }
+        status: { $ref: "#/components/schemas/NodeStatusValue" }
+        os:
+          anyOf: [{ $ref: "#/components/schemas/OSInfo" }, { type: "null" }]
+        hardware:
+          anyOf: [{ $ref: "#/components/schemas/Hardware" }, { type: "null" }]
+        agent_version: { type: string }
+        ip_addresses: { type: array, items: { type: string } }
+        mac_addresses: { type: array, items: { type: string } }
+        cert_not_after: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        last_seen_at: { type: [string, "null"], format: date-time }
+        latest:
+          description: Newest sample since the control center started
+          anyOf: [{ $ref: "#/components/schemas/Stats" }, { type: "null" }]
+    NodeStatusValue:
+      type: string
+      enum: [enrolling, online, offline]
+    OSInfo:
+      type: object
+      required: [platform, name, version, arch, hostname]
+      properties:
+        platform: { type: string }
+        name: { type: string }
+        version: { type: string }
+        build: { type: string }
+        kernel: { type: string }
+        arch: { type: string }
+        hostname: { type: string }
+    Hardware:
+      type: object
+      required: [vendor, model, cpu, ram_total, gpus, nics]
+      properties:
+        vendor: { type: string }
+        model: { type: string }
+        product_version: { type: string }
+        bios_version: { type: string }
+        cpu: { $ref: "#/components/schemas/CPUInfo" }
+        ram_total: { type: integer, format: int64 }
+        gpus: { type: array, items: { $ref: "#/components/schemas/GPUInfo" } }
+        nics: { type: array, items: { $ref: "#/components/schemas/NICInfo" } }
+    CPUInfo:
+      type: object
+      required: [model, cores, threads]
+      properties:
+        model: { type: string }
+        cores: { type: integer }
+        threads: { type: integer }
+    GPUInfo:
+      type: object
+      required: [name, mem_total]
+      properties:
+        name: { type: string }
+        mem_total: { type: [integer, "null"], format: int64 }
+    NICInfo:
+      type: object
+      required: [name, mac, addrs]
+      properties:
+        name: { type: string }
+        mac: { type: string }
+        addrs: { type: array, items: { type: string } }
+    Stats:
+      type: object
+      description: One telemetry sample. Values a platform cannot measure are null, never 0.
+      required: [ts, cpu, mem, disks, net, gpus, temps, battery, uptime_s]
+      properties:
+        ts: { type: string, format: date-time }
+        cpu: { $ref: "#/components/schemas/CPUStats" }
+        mem: { $ref: "#/components/schemas/MemStats" }
+        disks: { type: array, items: { $ref: "#/components/schemas/DiskStats" } }
+        net: { type: array, items: { $ref: "#/components/schemas/NetStats" } }
+        gpus: { type: array, items: { $ref: "#/components/schemas/GPUStats" } }
+        temps: { type: array, items: { $ref: "#/components/schemas/TempStat" } }
+        battery:
+          anyOf: [{ $ref: "#/components/schemas/Battery" }, { type: "null" }]
+        uptime_s: { type: integer, format: int64 }
+    CPUStats:
+      type: object
+      required: [pct, per_core, load1, freq_mhz, temp_c]
+      properties:
+        pct: { type: number }
+        per_core: { type: array, items: { type: number } }
+        load1: { type: [number, "null"] }
+        freq_mhz: { type: [number, "null"] }
+        temp_c: { type: [number, "null"] }
+    MemStats:
+      type: object
+      required: [total, used, swap_total, swap_used]
+      properties:
+        total: { type: integer, format: int64 }
+        used: { type: integer, format: int64 }
+        swap_total: { type: integer, format: int64 }
+        swap_used: { type: integer, format: int64 }
+    DiskStats:
+      type: object
+      required: [mount, total, used, read_bps, write_bps]
+      properties:
+        mount: { type: string }
+        total: { type: integer, format: int64 }
+        used: { type: integer, format: int64 }
+        read_bps: { type: [integer, "null"], format: int64 }
+        write_bps: { type: [integer, "null"], format: int64 }
+    NetStats:
+      type: object
+      required: [iface, up, rx_bps, tx_bps]
+      properties:
+        iface: { type: string }
+        up: { type: boolean }
+        rx_bps: { type: integer, format: int64 }
+        tx_bps: { type: integer, format: int64 }
+    GPUStats:
+      type: object
+      required: [name, util_pct, mem_used, mem_total, temp_c]
+      properties:
+        name: { type: string }
+        util_pct: { type: [number, "null"] }
+        mem_used: { type: [integer, "null"], format: int64 }
+        mem_total: { type: [integer, "null"], format: int64 }
+        temp_c: { type: [number, "null"] }
+    TempStat:
+      type: object
+      required: [sensor, c]
+      properties:
+        sensor: { type: string }
+        c: { type: number }
+    Battery:
+      type: object
+      required: [pct, on_ac, health_pct]
+      properties:
+        pct: { type: [number, "null"] }
+        on_ac: { type: boolean }
+        health_pct: { type: [number, "null"] }
+    StatsResponse:
+      type: object
+      required: [resolution, from, to, points]
+      properties:
+        resolution: { type: string, enum: [raw, 5m] }
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        points: { type: array, items: { $ref: "#/components/schemas/Point" } }
+    Point:
+      type: object
+      description: One raw sample or one 5-minute average. Null means not measured.
+      required: [ts, cpu_pct, mem_used, mem_total, disk_used_pct, net_rx_bps, net_tx_bps, cpu_temp_c, gpu_util_pct]
+      properties:
+        ts: { type: string, format: date-time }
+        cpu_pct: { type: [number, "null"] }
+        mem_used: { type: [integer, "null"], format: int64 }
+        mem_total: { type: [integer, "null"], format: int64 }
+        disk_used_pct: { type: [number, "null"] }
+        net_rx_bps: { type: [integer, "null"], format: int64 }
+        net_tx_bps: { type: [integer, "null"], format: int64 }
+        cpu_temp_c: { type: [number, "null"] }
+        gpu_util_pct: { type: [number, "null"] }
+    Envelope:
+      type: object
+      description: Frame of the live WebSocket (same envelope as the agent protocol).
+      required: [t, ts, d]
+      properties:
+        t: { type: string, enum: [sub, unsub, sub.ok, node.status, node.stats] }
+        id: { type: string }
+        ts: { type: string, format: date-time }
+        d: {}
+    Subscription:
+      type: object
+      required: [topics]
+      properties:
+        topics: { type: array, items: { type: string } }
+    NodeStatusEvent:
+      type: object
+      required: [node_id, status, last_seen_at]
+      properties:
+        node_id: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/NodeStatusValue" }
+        last_seen_at: { type: string, format: date-time }
+    NodeStatsEvent:
+      type: object
+      required: [node_id, stats]
+      properties:
+        node_id: { type: string, format: uuid }
+        stats: { $ref: "#/components/schemas/Stats" }

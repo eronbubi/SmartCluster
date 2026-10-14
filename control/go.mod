@@ -9,6 +9,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/libp2p/zeroconf/v2 v2.2.0
 	github.com/pressly/goose/v3 v3.29.0
+	go.yaml.in/yaml/v3 v3.0.5
 )
 
 require (

@@ -153,3 +153,25 @@ func TestMiscEndpoints(t *testing.T) {
 		t.Error("security headers missing")
 	}
 }
+
+func TestCORSOnlyForTheApp(t *testing.T) {
+	h := (&API{Events: http.NotFoundHandler(), Log: slog.New(slog.NewTextHandler(io.Discard, nil)), Version: "1"}).Handler()
+	for origin, want := range map[string]string{AppOrigin: AppOrigin, "https://evil.example": "", "": ""} {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/version", nil)
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if got := rec.Header().Get("Access-Control-Allow-Origin"); got != want {
+			t.Errorf("origin %q: allow-origin %q, want %q", origin, got, want)
+		}
+	}
+	req := httptest.NewRequest(http.MethodOptions, "/api/v1/nodes", nil)
+	req.Header.Set("Origin", AppOrigin)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent || rec.Header().Get("Access-Control-Allow-Methods") != "GET" {
+		t.Errorf("preflight: %d %v", rec.Code, rec.Header())
+	}
+}

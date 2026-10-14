@@ -98,7 +98,8 @@ func Run(ctx context.Context, cfg Config, log *slog.Logger) error {
 	}
 
 	cmdKeys := []proto.PubKey{{KeyID: cluster.CmdKeyID, Key: sign.EncodeKey(cluster.CmdKey.Public().(ed25519.PublicKey))}}
-	hub := &live.Hub{OriginPatterns: []string{"localhost:*", "127.0.0.1:*"}, Log: log}
+	// Same origin (web app) and the Electron renderer; nothing else.
+	hub := &live.Hub{OriginPatterns: []string{api.AppOriginHost}, Log: log}
 	gw := &agentgw.Gateway{
 		Store: st, Hub: hub, Signer: sign.NewSigner(cluster.CmdKeyID, cluster.CmdKey), CmdKeys: cmdKeys,
 		Issuer: cluster.CA, Now: time.Now, Log: log,
@@ -280,9 +281,9 @@ func serverHosts(extra []string) ([]string, error) {
 func lanAddresses() []string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		return nil
+		return []string{}
 	}
-	var out []string
+	out := []string{}
 	for _, a := range addrs {
 		ipnet, ok := a.(*net.IPNet)
 		if !ok || ipnet.IP.IsLoopback() || ipnet.IP.IsLinkLocalUnicast() {

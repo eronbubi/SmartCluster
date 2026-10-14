@@ -1,7 +1,11 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
 
-// webUI returns the handler for the embedded web app. The dashboard is added
-// in the next step of milestone a; until then only the API is served.
-func webUI() http.Handler { return nil }
+	"github.com/eronbubi/smartcluster/control/internal/web"
+)
+
+// webUI returns the embedded web app, or nil when the binary was built
+// without it (then only the API is served).
+func webUI() http.Handler { return web.Handler() }

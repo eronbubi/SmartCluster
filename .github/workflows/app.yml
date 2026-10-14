@@ -1,0 +1,38 @@
+name: app
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**", "docs/api/**", ".github/workflows/app.yml"]
+  pull_request:
+    paths: ["app/**", "docs/api/**", ".github/workflows/app.yml"]
+
+permissions:
+  contents: read
+
+env:
+  # Type definitions are enough for CI; the Electron runtime is never started here.
+  ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+
+defaults:
+  run:
+    working-directory: app
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: API types match docs/api/openapi.yaml
+        run: npm run gen:api && git diff --exit-code -- src/api/schema.d.ts
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run build:electron

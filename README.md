@@ -25,6 +25,7 @@ Requirements: Go 1.27.
 
 ```bash
 go test ./pkg/... ./agent/... ./control/...   # unit tests, start no servers
+cd app && npm ci && npm test                  # app tests (jsdom), no server
 ```
 
 Tests that start servers (Postgres, TLS listeners, the control center) only
@@ -32,4 +33,7 @@ run with `SC_TEST_SERVERS=1`: in CI and on test machines, not on a developer PC.
 
 ## Status
 
-Milestone a (agent stats, enrollment, control center, dashboard) is in progress.
+Milestone a is implemented: agent stats, enrollment, control center, dashboard
+(web and Electron). Open: the acceptance test on real machines (two nodes live
+in the dashboard, offline within 60 s after pulling the network cable) and the
+Windows Docker/WSL spike (ADR-0002), both on test laptops.

@@ -54,21 +54,38 @@ type API struct {
 // Handler returns the routes under /api/v1.
 func (a *API) Handler() http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /api/v1/version", a.version)
-	mux.HandleFunc("GET /api/v1/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
-	mux.HandleFunc("GET /api/v1/readyz", a.ready)
-	mux.HandleFunc("GET /api/v1/ca.crt", a.caCert)
-	mux.HandleFunc("GET /api/v1/cluster", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, http.StatusOK, a.Cluster) })
-	mux.HandleFunc("GET /api/v1/nodes", a.listNodes)
-	mux.HandleFunc("GET /api/v1/nodes/{id}", a.getNode)
-	mux.HandleFunc("GET /api/v1/nodes/{id}/stats", a.nodeStats)
-	mux.Handle("GET /api/v1/live", a.Events)
+	for _, rt := range a.routes() {
+		mux.Handle(http.MethodGet+" "+rt.path, rt.handler)
+	}
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "no such endpoint")
 	})
-	return securityHeaders(mux)
+	return securityHeaders(cors(mux))
+}
+
+type route struct {
+	path    string
+	handler http.Handler
+}
+
+// routes are all GET endpoints. contract_test.go checks them against
+// docs/api/openapi.yaml.
+func (a *API) routes() []route {
+	return []route{
+		{"/api/v1/version", http.HandlerFunc(a.version)},
+		{"/api/v1/healthz", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+		})},
+		{"/api/v1/readyz", http.HandlerFunc(a.ready)},
+		{"/api/v1/ca.crt", http.HandlerFunc(a.caCert)},
+		{"/api/v1/cluster", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			writeJSON(w, http.StatusOK, a.Cluster)
+		})},
+		{"/api/v1/nodes", http.HandlerFunc(a.listNodes)},
+		{"/api/v1/nodes/{id}", http.HandlerFunc(a.getNode)},
+		{"/api/v1/nodes/{id}/stats", http.HandlerFunc(a.nodeStats)},
+		{"/api/v1/live", a.Events},
+	}
 }
 
 func (a *API) version(w http.ResponseWriter, _ *http.Request) {
@@ -183,15 +200,57 @@ func (a *API) toNode(n store.Node) Node {
 		AgentVersion: n.AgentVersion, IPAddresses: n.IPAddresses, MACAddresses: n.MACAddresses,
 		CertNotAfter: n.CertNotAfter.UTC(), CreatedAt: n.CreatedAt.UTC(), LastSeenAt: n.LastSeenAt,
 	}
+	if out.Hardware != nil {
+		// Agents send empty lists, but a JSON null must never reach the app.
+		hw := *out.Hardware
+		hw.GPUs = nonNil(hw.GPUs)
+		hw.NICs = nonNil(hw.NICs)
+		for i := range hw.NICs {
+			hw.NICs[i].Addrs = nonNil(hw.NICs[i].Addrs)
+		}
+		out.Hardware = &hw
+	}
+	out.IPAddresses, out.MACAddresses = nonNil(out.IPAddresses), nonNil(out.MACAddresses)
 	if s, ok := a.Live.Latest(n.ID); ok {
 		out.Latest = &s
 	}
 	return out
 }
 
+func nonNil[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}
+
 func (a *API) internal(w http.ResponseWriter, err error) {
 	a.Log.Error("api: internal error", "err", err)
 	writeError(w, http.StatusInternalServerError, "internal", "internal error")
+}
+
+// AppOrigin is the origin of the bundled renderer of the Electron app
+// (ADR-0020). It is the only cross-origin caller the API answers.
+const AppOrigin = "app://smartcluster"
+
+// AppOriginHost is AppOrigin as WebSocket origin patterns see it.
+const AppOriginHost = "smartcluster"
+
+func cors(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Origin") == AppOrigin {
+			h := w.Header()
+			h.Set("Access-Control-Allow-Origin", AppOrigin)
+			h.Add("Vary", "Origin")
+			if r.Method == http.MethodOptions {
+				h.Set("Access-Control-Allow-Methods", "GET")
+				h.Set("Access-Control-Allow-Headers", "Content-Type")
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func securityHeaders(next http.Handler) http.Handler {
