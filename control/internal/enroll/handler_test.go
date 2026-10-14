@@ -20,6 +20,7 @@ import (
 	"github.com/eronbubi/smartcluster/pkg/enroll"
 	"github.com/eronbubi/smartcluster/pkg/proto"
 	"github.com/eronbubi/smartcluster/pkg/sign"
+	"github.com/eronbubi/smartcluster/pkg/testenv"
 )
 
 type memStore struct {
@@ -78,6 +79,7 @@ type env struct {
 // like the control center's agent port.
 func startServer(t *testing.T) *env {
 	t.Helper()
+	testenv.RequireServers(t)
 	now := time.Now()
 	ca, err := pki.NewCA("test", now)
 	if err != nil {
@@ -201,6 +203,7 @@ func TestEnrollDetectsManInTheMiddle(t *testing.T) {
 // A fake control center that does not know the code cannot produce the
 // server proof, whatever it answers.
 func TestEnrollRejectsServerWithoutCode(t *testing.T) {
+	testenv.RequireServers(t)
 	fakeCA, _ := pki.NewCA("fake", time.Now())
 	fakeCert, _ := fakeCA.IssueServer([]string{"127.0.0.1"}, time.Now())
 	fake := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

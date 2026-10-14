@@ -24,9 +24,11 @@ The Go modules are tied together by `go.work`.
 Requirements: Go 1.27.
 
 ```bash
-go vet ./pkg/...
-go test ./pkg/...
+go test ./pkg/... ./agent/... ./control/...   # unit tests, start no servers
 ```
+
+Tests that start servers (Postgres, TLS listeners, the control center) only
+run with `SC_TEST_SERVERS=1`: in CI and on test machines, not on a developer PC.
 
 ## Status
 

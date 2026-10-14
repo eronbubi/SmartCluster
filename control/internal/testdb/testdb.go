@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/eronbubi/smartcluster/control/internal/db"
+	"github.com/eronbubi/smartcluster/pkg/testenv"
 )
 
 var (
@@ -72,6 +73,7 @@ func url(database string) string {
 // New returns the URL of a new, migrated database.
 func New(t testing.TB) string {
 	t.Helper()
+	testenv.RequireServers(t)
 	startOnce.Do(func() { startErr = start() })
 	if startErr != nil {
 		t.Fatalf("testdb: start embedded postgres: %v", startErr)

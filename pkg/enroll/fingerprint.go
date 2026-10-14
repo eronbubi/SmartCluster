@@ -22,3 +22,7 @@ func Fingerprint(cert *x509.Certificate) string {
 	}
 	return strings.Join(groups, " ")
 }
+
+// ServiceType is the mDNS service under which control centers announce their
+// agent listener.
+const ServiceType = "_smartcluster._tcp"

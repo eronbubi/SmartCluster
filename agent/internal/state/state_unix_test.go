@@ -17,7 +17,7 @@ func checkPrivate(t *testing.T, dir string) {
 	if info.Mode().Perm() != 0o700 {
 		t.Errorf("directory mode %v, want 0700", info.Mode().Perm())
 	}
-	key, err := os.Stat(filepath.Join(dir, keyFile))
+	key, err := os.Stat(filepath.Join(dir, identityFile))
 	if err != nil {
 		t.Fatal(err)
 	}

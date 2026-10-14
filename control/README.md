@@ -30,7 +30,7 @@ real Postgres.
 | `--agent-addr` | `:8444` | enrollment, agent WebSocket, renewal. TLS 1.3, client certificates of the cluster CA |
 | `--api-addr` | `127.0.0.1:8443` | REST API, live WebSocket, web app. **No login before milestone b**, therefore localhost by default |
 
-## Run locally
+## Run (on a test machine, not on a developer PC)
 
 ```bash
 go run ./tools/devdb            # terminal 1: Postgres 18 in ./.data/devdb
@@ -43,7 +43,9 @@ go run ./control/cmd/smartcluster-control token create
 ## Tests
 
 ```bash
-go test ./control/...
+go test ./control/...                      # unit tests only, starts nothing
+SC_TEST_SERVERS=1 go test ./control/...    # CI / test machine: embedded Postgres, TLS listeners
 ```
 
-The first run downloads the Postgres binaries into the embedded-postgres cache.
+With `SC_TEST_SERVERS=1` the first run downloads the Postgres binaries into the
+embedded-postgres cache. Without it, every test that would start a server is skipped.

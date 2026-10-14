@@ -157,6 +157,8 @@ func Run(ctx context.Context, cfg Config, log *slog.Logger) error {
 			}
 		}()
 	}
+	stopAdvertising := advertise(cluster, agentPort, log)
+	defer stopAdvertising()
 	log.Info("control center running",
 		"agents", cfg.AgentAddr, "api", cfg.APIAddr, "cluster", cluster.Name,
 		"ca_fingerprint", cluster.CA.Fingerprint(), "certificate_hosts", strings.Join(hosts, ","))

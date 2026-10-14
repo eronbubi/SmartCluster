@@ -65,3 +65,32 @@ func TestLoadNotEnrolled(t *testing.T) {
 		t.Errorf("got %v, want ErrNotEnrolled", err)
 	}
 }
+
+func TestSaveCertAndCmdKeys(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "agent")
+	cert, key := selfSigned(t, "0192f1c4-7e2a-7b3c-9d4e-5f6a7b8c9d0e", false)
+	ca, _ := selfSigned(t, "SmartCluster CA test", true)
+	id := &enroll.Identity{NodeID: "0192f1c4-7e2a-7b3c-9d4e-5f6a7b8c9d0e", Key: key, Cert: cert, CA: ca}
+	if err := Save(dir, "10.0.0.1:8444", id); err != nil {
+		t.Fatal(err)
+	}
+
+	newCert, newKey := selfSigned(t, "0192f1c4-7e2a-7b3c-9d4e-5f6a7b8c9d0e", false)
+	if err := SaveCert(dir, newKey, newCert); err != nil {
+		t.Fatal(err)
+	}
+	keys := []proto.PubKey{{KeyID: "cmd-2", Key: "new"}}
+	if err := SaveCmdKeys(dir, keys); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.Cert.PrivateKey.(*ecdsa.PrivateKey).Equal(newKey) || string(s.Cert.Certificate[0]) != string(newCert.Raw) {
+		t.Error("certificate was not replaced")
+	}
+	if len(s.CmdKeys) != 1 || s.CmdKeys[0].KeyID != "cmd-2" || s.Control != "10.0.0.1:8444" || s.Dir != dir {
+		t.Errorf("config %+v", s.Config)
+	}
+}

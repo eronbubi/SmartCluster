@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# Tests that start local servers (Postgres, TLS listeners) only run here,
+# never by default on a developer PC.
+env:
+  SC_TEST_SERVERS: "1"
+
 jobs:
   linux:
     runs-on: ubuntu-latest

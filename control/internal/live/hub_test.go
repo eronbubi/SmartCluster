@@ -14,12 +14,14 @@ import (
 	"github.com/coder/websocket"
 
 	"github.com/eronbubi/smartcluster/pkg/proto"
+	"github.com/eronbubi/smartcluster/pkg/testenv"
 )
 
 const nodeID = "0192f1c4-7e2a-7b3c-9d4e-5f6a7b8c9d0e"
 
 func newHub(t *testing.T) (*Hub, string) {
 	t.Helper()
+	testenv.RequireServers(t)
 	h := &Hub{Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
 	srv := httptest.NewServer(h)
 	t.Cleanup(srv.Close)

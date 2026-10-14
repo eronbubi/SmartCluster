@@ -19,8 +19,10 @@ import (
 const usage = `Usage: smartcluster-agent <command> [flags]
 
 Commands:
-  join        join a cluster with a join code (--control host[:port] CODE)
+  join        join a cluster with a join code ([--control host[:port]] CODE)
   status      show node id, control center and CA fingerprint
+  run         run the agent in the foreground (the service runs this)
+  service     install|uninstall|start|stop|status the system service
   version     print the agent version
   inventory   print operating system and hardware inventory as JSON
   stats       print stats samples as JSON (-n count, -interval duration)
@@ -40,6 +42,10 @@ func main() {
 		err = runJoin(ctx, os.Args[2:], os.Stdout)
 	case "status":
 		err = runStatus(os.Args[2:], os.Stdout)
+	case "run":
+		err = runAgent(os.Args[2:])
+	case "service":
+		err = runService(os.Args[2:], os.Stdout)
 	case "version":
 		fmt.Println(version.Version)
 	case "inventory":

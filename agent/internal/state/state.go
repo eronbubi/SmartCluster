@@ -1,8 +1,9 @@
 // Package state persists the agent's identity and configuration.
 //
 // Everything lives in one directory that only SYSTEM/root and administrators
-// can read: agent.json (control address, node id, command keys), node.key,
-// node.crt and ca.crt.
+// can read: agent.json (control address, node id, command keys), node.pem
+// (private key and certificate together, so a renewal replaces both with one
+// atomic rename) and ca.crt.
 package state
 
 import (
@@ -21,10 +22,9 @@ import (
 )
 
 const (
-	configFile = "agent.json"
-	keyFile    = "node.key"
-	certFile   = "node.crt"
-	caFile     = "ca.crt"
+	configFile   = "agent.json"
+	identityFile = "node.pem"
+	caFile       = "ca.crt"
 )
 
 // ErrNotEnrolled means the directory holds no identity yet.
@@ -40,6 +40,7 @@ type Config struct {
 // State is a loaded identity, ready for mTLS.
 type State struct {
 	Config
+	Dir    string
 	Cert   tls.Certificate
 	CA     *x509.Certificate
 	CAPool *x509.CertPool
@@ -53,29 +54,44 @@ func Save(dir, control string, id *enroll.Identity) error {
 	if err := secureDir(dir); err != nil {
 		return fmt.Errorf("state: restrict access to %s: %w", dir, err)
 	}
-	keyDER, err := x509.MarshalPKCS8PrivateKey(id.Key)
+	if err := SaveCert(dir, id.Key, id.Cert); err != nil {
+		return err
+	}
+	if err := writeFileAtomic(filepath.Join(dir, caFile), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: id.CA.Raw})); err != nil {
+		return err
+	}
+	// Last: the config file's presence marks a complete enrollment.
+	return writeConfig(dir, Config{Control: control, NodeID: id.NodeID, CmdKeys: id.CmdKeys})
+}
+
+// SaveCert replaces key and certificate in one step (after renewal).
+func SaveCert(dir string, key *ecdsa.PrivateKey, cert *x509.Certificate) error {
+	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
 		return err
 	}
-	cfg, err := json.MarshalIndent(Config{Control: control, NodeID: id.NodeID, CmdKeys: id.CmdKeys}, "", "  ")
+	data := append(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}),
+		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})...)
+	return writeFileAtomic(filepath.Join(dir, identityFile), data)
+}
+
+// SaveCmdKeys replaces the trusted command keys.
+func SaveCmdKeys(dir string, keys []proto.PubKey) error {
+	s, err := Load(dir)
 	if err != nil {
 		return err
 	}
-	files := []struct {
-		name string
-		data []byte
-	}{
-		{keyFile, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER})},
-		{certFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: id.Cert.Raw})},
-		{caFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: id.CA.Raw})},
-		{configFile, append(cfg, '\n')}, // last: its presence marks a complete enrollment
+	cfg := s.Config
+	cfg.CmdKeys = keys
+	return writeConfig(dir, cfg)
+}
+
+func writeConfig(dir string, cfg Config) error {
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
 	}
-	for _, f := range files {
-		if err := writeFileAtomic(filepath.Join(dir, f.name), f.data); err != nil {
-			return err
-		}
-	}
-	return nil
+	return writeFileAtomic(filepath.Join(dir, configFile), append(data, '\n'))
 }
 
 // Load reads the identity written by Save.
@@ -87,17 +103,16 @@ func Load(dir string) (*State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("state: %w", err)
 	}
-	var s State
+	s := State{Dir: dir}
 	if err := json.Unmarshal(raw, &s.Config); err != nil {
 		return nil, fmt.Errorf("state: parse %s: %w", configFile, err)
 	}
-	certPEM, err1 := os.ReadFile(filepath.Join(dir, certFile))
-	keyPEM, err2 := os.ReadFile(filepath.Join(dir, keyFile))
-	caPEM, err3 := os.ReadFile(filepath.Join(dir, caFile))
-	if err := errors.Join(err1, err2, err3); err != nil {
+	identity, err1 := os.ReadFile(filepath.Join(dir, identityFile))
+	caPEM, err2 := os.ReadFile(filepath.Join(dir, caFile))
+	if err := errors.Join(err1, err2); err != nil {
 		return nil, fmt.Errorf("state: %w", err)
 	}
-	s.Cert, err = tls.X509KeyPair(certPEM, keyPEM)
+	s.Cert, err = tls.X509KeyPair(identity, identity)
 	if err != nil {
 		return nil, fmt.Errorf("state: node certificate: %w", err)
 	}
@@ -128,6 +143,10 @@ func writeFileAtomic(path string, data []byte) error {
 		return err
 	}
 	if err := tmp.Chmod(0o600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
 		tmp.Close()
 		return err
 	}
