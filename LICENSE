@@ -1,0 +1,73 @@
+SmartCluster - Proprietary License
+
+Copyright (c) 2026 Eron. All rights reserved.
+
+This software, including its source code, object code, documentation,
+architecture documents, role templates, designs and all other files in this
+repository (the "Software"), is proprietary and confidential. It is the
+exclusive property of the copyright holder.
+
+1. No license is granted
+
+   Except with the prior written permission of the copyright holder, no right
+   or license of any kind is granted to anyone, whether expressly, by
+   implication, by estoppel or otherwise. In particular, you may not:
+
+   a) use, run, install or execute the Software, in whole or in part;
+   b) copy, reproduce, download or store the Software, except as strictly
+      required by the hosting platform to display it to you;
+   c) modify, translate, adapt or create derivative works of the Software;
+   d) distribute, publish, sublicense, sell, rent, lease, lend or otherwise
+      make the Software available to any third party;
+   e) decompile, disassemble or reverse engineer the Software, or attempt to
+      derive its source code, algorithms or internal structure from any
+      binary form, to the extent such restriction is permitted by law;
+   f) remove, alter or obscure any copyright, license or proprietary notice;
+   g) circumvent, disable or interfere with the license key system or any
+      other technical protection of the Software;
+   h) use the Software or any part of it to develop, train, fine-tune or
+      evaluate any software, product or service, including machine learning
+      or artificial intelligence models;
+   i) use the Software, its documentation or its design to build a competing
+      product or service.
+
+2. Access is not permission
+
+   The fact that the Software can be viewed, for example on a code hosting
+   platform, does not grant any right beyond what this license expressly
+   allows. Any rights the hosting platform's own terms of service grant to
+   its users are limited to what those terms strictly require and grant
+   nothing further.
+
+3. Confidentiality
+
+   The Software contains trade secrets and confidential information. Anyone
+   who obtains access to it must keep it confidential and must not disclose
+   it to any third party.
+
+4. Third-party components
+
+   The Software uses third-party components that are licensed under their
+   own terms (for example Go modules and npm packages listed in go.mod,
+   go.sum, package.json and package-lock.json). Those terms apply to those
+   components only. This license applies to everything else.
+
+5. Termination and remedies
+
+   Any use of the Software in violation of this license is unauthorized and
+   infringes the copyright holder's rights. Upon any violation, you must
+   immediately stop all use and destroy all copies in your possession. The
+   copyright holder reserves all legal remedies.
+
+6. No warranty, no liability
+
+   The Software is provided "as is", without warranty of any kind, express or
+   implied. To the maximum extent permitted by law, the copyright holder is
+   not liable for any damages arising from the use of or inability to use
+   the Software.
+
+7. Permission requests
+
+   Requests for permission must be made in writing to the copyright holder.
+   Commercial use of the Software requires a separate written license
+   agreement and a valid license key issued by the copyright holder.

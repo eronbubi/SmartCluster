@@ -1,6 +1,9 @@
 # SmartCluster
 
-Proprietary, closed source. Turns old laptops and PCs into a self-hosted server cluster.
+Turns old laptops and PCs into a self-hosted server cluster.
+
+**Proprietary and confidential. All rights reserved.** No use, copying,
+modification or distribution without written permission; see [LICENSE](LICENSE).
 
 - Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
 - Decisions: [docs/adr](docs/adr/README.md)

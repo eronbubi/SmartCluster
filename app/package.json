@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "SmartCluster control app: web UI and Electron shell",
+  "license": "UNLICENSED",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
