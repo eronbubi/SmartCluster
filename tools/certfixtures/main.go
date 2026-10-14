@@ -75,7 +75,7 @@ func leaf(ca *issuer, usage x509.ExtKeyUsage, from, to time.Time) *x509.Certific
 
 func write(dir, name string, c *x509.Certificate) {
 	data := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: c.Raw})
-	if err := os.WriteFile(filepath.Join(dir, name), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, name), data, 0o600); err != nil { //nolint:gosec // G703: writing into the directory given on the command line is the purpose
 		log.Fatal(err)
 	}
 }
@@ -85,7 +85,7 @@ func main() {
 		log.Fatal("usage: certfixtures <output directory>")
 	}
 	dir := os.Args[1]
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil { //nolint:gosec // G703: the output directory is the command-line argument by design
 		log.Fatal(err)
 	}
 	ca := newCA("SmartCluster CA fixture")

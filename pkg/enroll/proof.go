@@ -58,7 +58,7 @@ func proof(key []byte, label string, serverCertDER, object, nonce []byte) []byte
 	// Every field is length-prefixed so that no two inputs share an encoding.
 	for _, field := range [][]byte{[]byte(label), certHash[:], objectHash[:], nonce} {
 		var n [4]byte
-		binary.BigEndian.PutUint32(n[:], uint32(len(field)))
+		binary.BigEndian.PutUint32(n[:], uint32(len(field))) //nolint:gosec // G115: fields are hashes, a label and a 32-byte nonce
 		m.Write(n[:])
 		m.Write(field)
 	}

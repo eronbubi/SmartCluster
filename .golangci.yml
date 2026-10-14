@@ -8,6 +8,18 @@ linters:
     - gosec
     - misspell
     - noctx
+  exclusions:
+    # std-error-handling: unchecked errors of Close, Flush, os.Remove and
+    # fmt.Print* are noise. common-false-positives: gosec G204/G304 and similar
+    # for fixed argv and administrator-configured paths.
+    presets:
+      - std-error-handling
+      - common-false-positives
+    rules:
+      # Tests talk to loopback servers they started and read their own
+      # fixtures; request contexts and gosec's URL/file checks add nothing there.
+      - path: _test\.go
+        linters: [gosec, noctx]
 
 formatters:
   enable:

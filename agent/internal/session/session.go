@@ -76,7 +76,7 @@ func (r *Runner) Run(ctx context.Context) error {
 			backoff = minB
 		}
 		// Jitter keeps a whole cluster from reconnecting in lockstep after a restart.
-		delay := backoff/2 + rand.N(backoff/2+1)
+		delay := backoff/2 + rand.N(backoff/2+1) //nolint:gosec // G404: reconnect jitter, not security-relevant
 		r.Log.Warn("disconnected from control center", "err", err, "retry_in", delay.Round(time.Millisecond))
 		select {
 		case <-ctx.Done():
@@ -93,14 +93,14 @@ func (r *Runner) session(ctx context.Context, st *state.State) error {
 
 	client := mtlsClient(st)
 	dctx, dcancel := context.WithTimeout(ctx, dialTimeout)
-	ws, _, err := websocket.Dial(dctx, "wss://"+st.Control+"/agent/v1/ws", &websocket.DialOptions{
+	ws, _, err := websocket.Dial(dctx, "wss://"+st.Control+"/agent/v1/ws", &websocket.DialOptions{ //nolint:bodyclose // websocket.Dial owns the body: "You never need to close resp.Body yourself."
 		HTTPClient: client, Subprotocols: []string{proto.Subprotocol},
 	})
 	dcancel()
 	if err != nil {
 		return fmt.Errorf("connect to %s: %w", st.Control, err)
 	}
-	defer ws.CloseNow()
+	defer func() { _ = ws.CloseNow() }()
 	ws.SetReadLimit(proto.MaxMessageBytes)
 
 	osInfo, hw, errs := r.Inventory(ctx)

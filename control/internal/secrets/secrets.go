@@ -85,7 +85,7 @@ func LoadOrCreateKey(path string) ([]byte, error) {
 		return nil, fmt.Errorf("secrets: create master key: %w", err)
 	}
 	if _, err := f.Write(key); err != nil {
-		f.Close()
+		_ = f.Close()
 		return nil, err
 	}
 	return key, f.Close()

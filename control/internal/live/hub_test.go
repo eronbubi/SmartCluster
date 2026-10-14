@@ -30,11 +30,11 @@ func newHub(t *testing.T) (*Hub, string) {
 
 func dial(t *testing.T, url string) *websocket.Conn {
 	t.Helper()
-	c, _, err := websocket.Dial(context.Background(), url, nil)
+	c, _, err := websocket.Dial(context.Background(), url, nil) //nolint:bodyclose // websocket.Dial owns the body: "You never need to close resp.Body yourself."
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { c.CloseNow() })
+	t.Cleanup(func() { _ = c.CloseNow() })
 	return c
 }
 

@@ -45,12 +45,12 @@ func Main(m *testing.M) {
 }
 
 func start() error {
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:0")
 	if err != nil {
 		return err
 	}
-	port = uint32(l.Addr().(*net.TCPAddr).Port)
-	l.Close()
+	port = uint32(l.Addr().(*net.TCPAddr).Port) //nolint:gosec // G115: TCP ports are 0..65535
+	_ = l.Close()
 	runtime, err = os.MkdirTemp("", "smartcluster-pg-*")
 	if err != nil {
 		return err

@@ -23,13 +23,16 @@ func main() {
 	dir := flag.String("dir", filepath.Join(".data", "devdb"), "data directory")
 	flag.Parse()
 
+	if *port == 0 || *port > 65535 {
+		log.Fatal("-port must be between 1 and 65535")
+	}
 	abs, err := filepath.Abs(*dir)
 	if err != nil {
 		log.Fatal(err)
 	}
 	pg := embeddedpostgres.NewDatabase(embeddedpostgres.DefaultConfig().
 		Version(embeddedpostgres.V18).
-		Port(uint32(*port)).
+		Port(uint32(*port)). //nolint:gosec // G115: checked to be at most 65535 above
 		RuntimePath(filepath.Join(abs, "runtime")).
 		DataPath(filepath.Join(abs, "data")).
 		Username("smartcluster").Password("dev").Database("smartcluster").

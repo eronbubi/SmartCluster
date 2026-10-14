@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -77,13 +78,22 @@ func (s *Store) InsertStats(ctx context.Context, nodeID string, received time.Ti
 			net_rx_bps, net_tx_bps, cpu_temp_c, gpu_util_pct, on_battery, detail)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT DO NOTHING`,
-		nodeID, received, st.CPU.Pct, st.CPU.Load1, int64(st.Mem.Used), int64(st.Mem.Total), int64(st.Mem.SwapUsed), diskMax,
-		int64(rx), int64(tx), st.CPU.TempC, gpuMax, onBattery, detail)
+		nodeID, received, st.CPU.Pct, st.CPU.Load1, clampInt64(st.Mem.Used), clampInt64(st.Mem.Total), clampInt64(st.Mem.SwapUsed), diskMax,
+		clampInt64(rx), clampInt64(tx), st.CPU.TempC, gpuMax, onBattery, detail)
 	batch.Queue(`UPDATE nodes SET last_seen_at = $2 WHERE id = $1`, nodeID, received)
 	if err := s.pool.SendBatch(ctx, batch).Close(); err != nil {
 		return fmt.Errorf("store: insert stats: %w", err)
 	}
 	return nil
+}
+
+// clampInt64 converts byte counters for bigint columns. Real values are far
+// below 2^63; a corrupt agent value must not wrap into a negative number.
+func clampInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v)
 }
 
 // QueryStats returns the series of a node in [from, to).

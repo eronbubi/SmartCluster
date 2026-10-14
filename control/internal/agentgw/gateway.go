@@ -127,7 +127,7 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	defer ws.CloseNow()
+	defer func() { _ = ws.CloseNow() }()
 	if ws.Subprotocol() != proto.Subprotocol {
 		_ = ws.Close(websocket.StatusCode(proto.CloseProtocolUnsupported), "subprotocol "+proto.Subprotocol+" required")
 		return
@@ -182,9 +182,13 @@ func (g *Gateway) readHello(ctx context.Context, ws *websocket.Conn, nodeID stri
 		return hello, err
 	}
 	env, err := proto.Decode(data)
-	if err != nil || env.Type != proto.TypeHello {
+	if err != nil {
 		_ = ws.Close(websocket.StatusCode(proto.CloseProtocolUnsupported), "expected hello")
-		return hello, fmt.Errorf("first frame is not hello: %v", err)
+		return hello, fmt.Errorf("decode first frame: %w", err)
+	}
+	if env.Type != proto.TypeHello {
+		_ = ws.Close(websocket.StatusCode(proto.CloseProtocolUnsupported), "expected hello")
+		return hello, fmt.Errorf("first frame is %q, not hello", env.Type)
 	}
 	if err := env.Unmarshal(&hello); err != nil {
 		_ = ws.Close(websocket.StatusCode(proto.CloseProtocolUnsupported), "invalid hello")

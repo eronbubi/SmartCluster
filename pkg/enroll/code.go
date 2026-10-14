@@ -40,12 +40,12 @@ func NewCode() Code {
 func ParseCode(s string) (Code, error) {
 	var b strings.Builder
 	for _, r := range strings.ToUpper(s) {
-		switch {
-		case r == '-' || r == ' ':
+		switch r {
+		case '-', ' ':
 			continue
-		case r == 'I' || r == 'L':
+		case 'I', 'L':
 			r = '1'
-		case r == 'O':
+		case 'O':
 			r = '0'
 		}
 		if !strings.ContainsRune(crockford, r) {

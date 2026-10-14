@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -151,13 +152,13 @@ func (e *env) client(cert *tls.Certificate) *http.Client {
 
 func (e *env) dial(cert tls.Certificate) *websocket.Conn {
 	e.t.Helper()
-	c, _, err := websocket.Dial(context.Background(), "wss://"+e.addr+WSPath, &websocket.DialOptions{
+	c, _, err := websocket.Dial(context.Background(), "wss://"+e.addr+WSPath, &websocket.DialOptions{ //nolint:bodyclose // websocket.Dial owns the body: "You never need to close resp.Body yourself."
 		HTTPClient: e.client(&cert), Subprotocols: []string{proto.Subprotocol},
 	})
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	e.t.Cleanup(func() { c.CloseNow() })
+	e.t.Cleanup(func() { _ = c.CloseNow() })
 	return c
 }
 
@@ -247,7 +248,7 @@ func TestAgentSession(t *testing.T) {
 
 func TestWebSocketRequiresClientCertificate(t *testing.T) {
 	e := newEnv(t)
-	_, resp, err := websocket.Dial(context.Background(), "wss://"+e.addr+WSPath, &websocket.DialOptions{
+	_, resp, err := websocket.Dial(context.Background(), "wss://"+e.addr+WSPath, &websocket.DialOptions{ //nolint:bodyclose // websocket.Dial owns the body: "You never need to close resp.Body yourself."
 		HTTPClient: e.client(nil), Subprotocols: []string{proto.Subprotocol},
 	})
 	if err == nil || resp == nil || resp.StatusCode != http.StatusUnauthorized {
@@ -364,7 +365,7 @@ func TestCertificateRenewal(t *testing.T) {
 
 func TestSendCommandToOfflineNode(t *testing.T) {
 	e := newEnv(t)
-	if _, err := e.gw.SendCommand(context.Background(), "0192f1c4-7e2a-7b3c-9d4e-5f6a7b8c9d0e", proto.CmdCertRenew, nil); err != ErrOffline {
+	if _, err := e.gw.SendCommand(context.Background(), "0192f1c4-7e2a-7b3c-9d4e-5f6a7b8c9d0e", proto.CmdCertRenew, nil); !errors.Is(err, ErrOffline) {
 		t.Errorf("got %v, want ErrOffline", err)
 	}
 }
