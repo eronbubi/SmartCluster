@@ -1,0 +1,33 @@
+name: go
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [pkg]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+      - name: gofmt
+        run: test -z "$(gofmt -l ${{ matrix.module }})" || (gofmt -l ${{ matrix.module }}; exit 1)
+      - name: vet
+        run: go vet ./${{ matrix.module }}/...
+      - name: test
+        run: go test -race -count=1 ./${{ matrix.module }}/...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+          working-directory: ${{ matrix.module }}

@@ -434,7 +434,7 @@ Die öffentlichen Herstellerschlüssel sind in die Binaries einkompiliert. Pro Z
 {
   "v": 1,
   "kid": "cmd-2026-10-14",
-  "cmd_id": "01JA2Z6Q3B8V0X7K9M4N5P6R7S",
+  "cmd_id": "0192f1c4-8a10-7c3e-9f00-1a2b3c4d5e6f",
   "node_id": "0192f1c4-7e2a-7b3c-9d4e-5f6a7b8c9d0e",
   "type": "role.apply",
   "issued_at": "2026-10-14T12:00:00Z",
@@ -722,7 +722,7 @@ CREATE TABLE audit_log (
 ## 8. WebSocket-Protokoll
 
 ### 8.1 Allgemein
-- Textframes mit JSON und der Hülle `{"t": "<typ>", "id": "<ulid, optional>", "ts": "<RFC 3339>", "d": {…}}`.
+- Textframes mit JSON und der Hülle `{"t": "<typ>", "id": "<uuid, optional>", "ts": "<RFC 3339>", "d": {…}}`.
 - Schemas liegen in `/docs/protocol/*.schema.json` und werden in den Tests beider Seiten gegen echte Nachrichten geprüft.
 - Maximale Nachrichtengröße: 1 MiB. Bundles und Binaries laufen über HTTPS, nicht über WS.
 - WS-Ping alle 20 s von der Kontrollzentrale. Ohne Nachricht seit 60 s gilt der Node als `offline`.
@@ -753,7 +753,7 @@ CREATE TABLE audit_log (
 | A → K | `event` | `{kind: "container.state" \| "health" \| "power" \| "net.change", …}` |
 | K → A | `cmd` | signierter Befehl (5.3) |
 | A → K | `cmd.ack` | `{cmd_id}`: geprüft und angenommen |
-| A → K | `cmd.reject` | `{cmd_id, code: "bad_signature" \| "expired" \| "replay" \| "unknown_type" \| "invalid_payload" \| "busy"}` |
+| A → K | `cmd.reject` | `{cmd_id, code: "bad_signature" \| "expired" \| "replay" \| "wrong_node" \| "unknown_type" \| "invalid_payload" \| "busy"}` |
 | A → K | `cmd.progress` | `{cmd_id, step, pct, msg_key, msg_args}` |
 | A → K | `cmd.result` | `{cmd_id, ok, error_code, data}` |
 | A → K | `log` | `{stream_id, lines[{ts, src: "stdout" \| "stderr", text}]}` |
@@ -768,7 +768,7 @@ CREATE TABLE audit_log (
   "net": [{ "iface": "enp0s25", "up": true, "rx_bps": 5120, "tx_bps": 2048 }],
   "gpus": [{ "name": "NVIDIA GeForce 940MX", "util_pct": 0, "mem_used": 0, "mem_total": 2147483648, "temp_c": 41 }],
   "temps": [{ "sensor": "coretemp/Package id 0", "c": 52.0 }],
-  "battery": { "present": true, "pct": 81, "on_ac": true, "health_pct": 64 },
+  "battery": { "pct": 81, "on_ac": true, "health_pct": 64 },
   "uptime_s": 123456
 }
 ```
