@@ -121,3 +121,16 @@ func TestFingerprint(t *testing.T) {
 		t.Errorf("fingerprint %q", fp)
 	}
 }
+
+func TestAllowed(t *testing.T) {
+	for host, want := range map[string]bool{
+		"192.168.1.20": true, "10.1.2.3": true, "127.0.0.1": true, "::1": true, "fe80::1": true, "fd00::5": true,
+		"8.8.8.8": false, "2a02:1210::1": false,
+		"eron.local": true, "ERON.LOCAL.": true, "localhost": true,
+		"eron": false, "example.com": false, "local.example.com": false,
+	} {
+		if got := Allowed(host); got != want {
+			t.Errorf("Allowed(%q) = %v, want %v", host, got, want)
+		}
+	}
+}

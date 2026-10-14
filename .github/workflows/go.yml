@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [pkg, agent, control]
+        module: [pkg, agent, control, tools]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

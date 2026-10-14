@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/eronbubi/smartcluster/pkg/enroll"
@@ -37,6 +38,26 @@ var permittedNets = []string{
 
 // permittedDomains limits DNS names to mDNS names and localhost.
 var permittedDomains = []string{"local", "localhost"}
+
+// Allowed reports whether host (an IP address or DNS name) lies within the
+// CA's name constraints, i.e. whether a server certificate may contain it.
+func Allowed(host string) bool {
+	if ip := net.ParseIP(host); ip != nil {
+		for _, s := range permittedNets {
+			if _, n, err := net.ParseCIDR(s); err == nil && n.Contains(ip) {
+				return true
+			}
+		}
+		return false
+	}
+	host = strings.ToLower(strings.TrimSuffix(host, "."))
+	for _, d := range permittedDomains {
+		if host == d || strings.HasSuffix(host, "."+d) {
+			return true
+		}
+	}
+	return false
+}
 
 // CA is the cluster certificate authority.
 type CA struct {
