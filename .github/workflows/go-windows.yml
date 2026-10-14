@@ -1,0 +1,26 @@
+name: go-windows
+
+# Windows runners count double against the private-repo minutes (ADR-0018),
+# so this only runs when Windows-relevant code changes.
+on:
+  push:
+    branches: [main]
+    paths: ["agent/**", "pkg/**", "go.work", ".github/workflows/go-windows.yml"]
+  pull_request:
+    paths: ["agent/**", "pkg/**", "go.work", ".github/workflows/go-windows.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+      - name: vet
+        run: go vet ./agent/... ./pkg/...
+      - name: test
+        run: go test -count=1 ./agent/... ./pkg/...

@@ -24,8 +24,6 @@ type OSInfo struct {
 	Kernel   string `json:"kernel,omitempty"`
 	Arch     string `json:"arch"`
 	Hostname string `json:"hostname"`
-	// EOL is the end of security support (YYYY-MM-DD) if known.
-	EOL string `json:"eol,omitempty"`
 }
 
 // Hardware is the static hardware inventory of a node.
