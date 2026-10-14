@@ -1,0 +1,22 @@
+# Build output
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Node / app
+node_modules/
+/app/out/
+/app/dist/
+/app/dist-electron/
+/control/internal/web/dist/*
+!/control/internal/web/dist/.gitkeep
+
+# Local data and secrets
+.env
+.env.*
+!.env.example
+/.data/
+*.local.yaml
