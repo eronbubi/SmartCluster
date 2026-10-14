@@ -19,6 +19,8 @@ import (
 const usage = `Usage: smartcluster-agent <command> [flags]
 
 Commands:
+  join        join a cluster with a join code (--control host[:port] CODE)
+  status      show node id, control center and CA fingerprint
   version     print the agent version
   inventory   print operating system and hardware inventory as JSON
   stats       print stats samples as JSON (-n count, -interval duration)
@@ -34,6 +36,10 @@ func main() {
 
 	var err error
 	switch os.Args[1] {
+	case "join":
+		err = runJoin(ctx, os.Args[2:], os.Stdout)
+	case "status":
+		err = runStatus(os.Args[2:], os.Stdout)
 	case "version":
 		fmt.Println(version.Version)
 	case "inventory":

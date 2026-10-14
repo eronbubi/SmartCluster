@@ -215,8 +215,8 @@ SmartCluster nutzt Container statt VMs. Es gibt keine Live-Migration und kein au
 | `update` | Selbst-Update: Binary herunterladen, Hersteller-Signatur prüfen, atomar tauschen, neu starten. Startet die neue Version nicht, wird zurückgerollt |
 
 **Lokale Daten**
-- Linux: `/etc/smartcluster/agent.yaml` und `/var/lib/smartcluster/`. Schlüssel liegen mit Rechten 0600, Rollendaten unter `roles/<assignment-id>/`.
-- Windows: `C:\ProgramData\SmartCluster\`, mit ACL nur für SYSTEM und Administratoren.
+- Linux: Identität und Konfiguration in `/var/lib/smartcluster/agent/` (`agent.json`, `node.key`, `node.crt`, `ca.crt`), Verzeichnis 0700, Dateien 0600. Rollendaten unter `/var/lib/smartcluster/roles/<assignment-id>/`.
+- Windows: `C:\ProgramData\SmartCluster\`, Identität in `agent\`, mit geschützter ACL nur für SYSTEM und Administratoren (die geerbten Leserechte von ProgramData werden entfernt).
 
 **Zustände:** `unpaired → enrolling → connected ⇄ reconnecting`. Auf dem ersten Node gibt es zusätzlich den Zustand `bootstrap`.
 
@@ -350,7 +350,7 @@ Ziel: Agent und Kontrollzentrale weisen sich gegenseitig über den gemeinsamen J
 
 Der Join-Code wird verbraucht. Das Client-Zertifikat gilt 1 Jahr und wird ab 30 Tagen vor Ablauf über die bestehende Verbindung erneuert.
 Der **Setup-Code** für die App (4.1, Schritt 8) nutzt dasselbe Verfahren, nur ohne CSR. Danach pinnt die App die CA.
-Weitere Geräte und Browser: Die App zeigt den CA-Fingerprint als 6 Wortgruppen an. Er lässt sich mit `smartcluster-agent status` oder einem bereits angemeldeten Gerät vergleichen.
+Weitere Geräte und Browser: Die App zeigt den CA-Fingerprint (SHA-256, 16 Hex-Gruppen) an. Er lässt sich mit `smartcluster-agent status` oder einem bereits angemeldeten Gerät vergleichen.
 
 ### 4.4 Hardware-Check und BIOS-Anleitung
 
